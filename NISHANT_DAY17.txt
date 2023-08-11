@@ -1,0 +1,157 @@
+1. Fetching of data from records using Dnyamic method using RPGLE and displaying the output in DSPF file
+   by PREPARE and DECLARE.
+
+ Columns . . . :    6  76            Edit                      TEN31LIB/TRNGSRC 
+ SEU==>                                                                 DYNSQLR 
+ FMT H  HKeywords++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+        *************** Beginning of data ************************************* 
+0000.01 HDFTACTGRP(*NO)                                                         
+0001.00 FDYNSQLD   CF   E             WORKSTN SFILE(DYNSFL:SRRN)                
+0002.00 DSTMT             S            100A   INZ('SELECT * FROM TEN31LIB/')    
+0003.00 DSRRN             S              3P 0 INZ(*ZEROS)                       
+0003.01 DLOADSFL          PR                                                    
+0003.02 D                              100A                                     
+0004.00 C                   EVAL      STMT=%TRIM(STMT)+'EMPLOYEE WHERE'         
+0005.00 C                   EVAL      *IN82=*ON                                 
+0006.00 C                   DOW       NOT *IN03                                 
+0007.00 C                   WRITE     FOOTER                                    
+0008.00 C                   EXFMT     DYNCTL                                    
+0009.00 C   03              LEAVE                                               
+0010.00 C                   EVAL      STMT=%TRIM(STMT)+' '+FLD+OPR+VAL          
+0011.00 C                   IF        KEY<>*BLANKS                              
+0012.00 C                   EVAL      STMT=%TRIM(STMT)+' ORDER BY '+            
+0013.00 C                             %TRIM(KEY)  
+0014.00 C                   ENDIF                                               
+0015.00 C                   CALLP     LOADSFL(STMT)                             
+0016.00 C                   ENDDO                                               
+0017.00 C                   EVAL      *INLR=*ON                                 
+0018.00 PLOADSFL          B                                                     
+0018.01 DLOADSFL          PI                                                    
+0019.00 DSTR                           100A                                     
+0020.00 C                   EVAL      *IN83=*ON                                 
+0021.00 C                   WRITE     DYNCTL  
+0022.01 C                   EVAL      SRRN=0                                    
+0023.00 C/EXEC SQL                                                              
+0024.00 C+ PREPARE S1 FROM :STR                                                 
+0025.00 C/END-EXEC                                                              
+0026.00 C/EXEC SQL                                                              
+0027.00 C+ DECLARE DYNCUR CURSOR FOR S1                                         
+0028.00 C/END-EXEC                                                              
+0029.00 C/EXEC SQL                                                              
+0030.00 C+ OPEN DYNCUR                                                          
+0031.00 C/END-EXEC                                                              
+0032.00 C                   DOW       SQLCODE=0                                 
+0033.00 C/EXEC SQL                                                              
+0034.00 C+ FETCH NEXT FROM DYNCUR INTO :EMPID, :NAME, :DEPT, :GENDER,:DOJ,      
+0035.00 C+ :SALARY                                                              
+0036.00 C/END-EXEC                                                              
+0038.00 C                   IF        SQLCODE=100                               
+0039.00 C                   LEAVE                                               
+0040.00 C                   ENDIF                                             
+0041.00 C                   EVAL      SRRN+=1                                 
+0042.00 C                   WRITE     DYNSFL                                  
+0042.01 C                   ENDDO                                             
+0043.00 C                   IF        SRRN > 0                                
+0044.00 C                   EVAL      *IN81=*ON                               
+0045.00 C                   ELSE                                              
+0048.00 C                   EVAL      *IN81=*OFF                              
+0049.00 C                   EVAL      MSG='NO RECORDS FETCHED FOR THIS QUERY' 
+0050.00 C                   ENDIF                                               
+0051.00 C/EXEC SQL                                                              
+0052.00 C+ CLOSE DYNCUR                                                         
+0053.00 C/END-EXEC                                                              
+0054.00 C                   RETURN                                              
+0055.00 PLOADSFL          E                                                     
+        ****************** End of data **************************************** 
+2.  For fetching the details of the record by implementing 2 cursor in the field and declaring temporary field
+    for fetching the data using SQLRPGLE.
+  Columns . . . :    6  76            Edit                      TEN31LIB/TRNGSRC 
+ SEU==>                                                                SQLDEPTR 
+ FMT F  FFilename++IPEASFRlen+LKlen+AIDevice+.Keywords+++++++++++++++++++++++++ 
+        *************** Beginning of data ************************************* 
+0001.00 FDEPTSALR  O    E             PRINTER OFLIND(*IN95)                     
+0005.00 C/EXEC SQL                                                              
+0006.00 C+ DECLARE ALLRECS CURSOR FOR SELECT EMPID,NAME,DEPT,SALARY FROM        
+0006.01 C+ EMPLOYEE ORDER BY DEPT                                               
+0007.00 C/END-EXEC                                                              
+0008.00 C/EXEC SQL                                                              
+0009.00 C+ DECLARE GROUPS CURSOR FOR SELECT DEPT ,SUM(SALARY),                  
+0010.00 C+ MAX(SALARY) FROM TEN31LIB/EMPLOYEE                                   
+0011.00 C+ GROUP BY DEPT                                                        
+0012.00 C/END-EXEC                                                              
+0013.00 C/EXEC SQL                                                              
+0014.00 C+ OPEN ALLRECS                                                         
+0015.00 C/END-EXEC                                                              
+0016.00 C/EXEC SQL                                                              
+0017.00 C+ OPEN GROUPS                                                          
+0018.00 C/END-EXEC
+0020.00 C                   WRITE     HEAD1                                     
+0021.00 C                   WRITE     HEAD2                                     
+0021.01 C/EXEC SQL                                                              
+0021.02 C+ FETCH NEXT FROM ALLRECS INTO :EMPID, :NAME, :DEPT, :SALARY           
+0021.04 C/END-EXEC                                                              
+0021.05 C** STORE 1ST EMP'S DEPT IN TEMP=VARIABLES TO COMPARE LATTER            
+0021.06 C                   EVAL      TMPDEPT=DEPT                              
+0022.00 C                   DOW       SQLCODE=0                                 
+0022.01 C                   IF        SQLCODE=100    
+0022.02 C                   LEAVE                                               
+0022.03 C                   ENDIF                                               
+0026.00 C                   WRITE     DETAIL                                    
+0027.00 C   95              WRITE     HEAD1                                     
+0028.00 C   95              WRITE     HEAD2                                     
+0028.01 C   95              EVAL      *IN95=*OFF                                
+0028.02 C/EXEC SQL                                                              
+0028.03 C+ FETCH NEXT FROM ALLRECS INTO :EMPID, :NAME, :DEPT, :SALARY           
+0031.00 C/END-EXEC                                                              
+0032.00 C                   IF        DEPT<>TMPDEPT                             
+0033.00 C/EXEC SQL                                                              
+0034.00 C+ FETCH NEXT FROM GROUPS INTO :TMPDEPT, :DEPTSAL, :DEPTMAX             
+0035.00 C/END-EXEC                                                              
+0036.00 C                   WRITE     SUM1                                      
+0037.00 C                   WRITE     SUM2                                      
+0038.00 C                   WRITE     SUM3                                      
+0039.00 C                   EVAL      TOTSAL+=DEPTSAL                           
+0040.00 C                   EVAL      TOTMAX+=DEPTMAX    
+0041.00 C                   EVAL      TMPDEPT=DEPT                              
+0042.00 C                   ENDIF                                               
+0043.00 C                   ENDDO                                               
+0044.00 C                   WRITE     GRD1                                      
+0045.00 C                   WRITE     GRD2                                      
+0046.00 C/EXEC SQL                                                              
+0047.00 C+ CLOSE ALLRECS                                                        
+0048.00 C/END-EXEC                                                              
+0049.00 C/EXEC SQL                                                              
+0050.00 C+ CLOSE GROUPS                                                         
+0051.00 C/END-EXEC                                                              
+0052.00 C                   EVAL      *INLR=*ON                                 
+        ****************** End of data **************************************** 
+                                                                                
+ 3. JOIN OF TWO TABLES AND DISPLAYING THE DATA INSIDE THE TABLE USING COMMAND AND PROMPT.
+INV22 AND INV23 are two PF files
+  
+SELECT INVNO,CUSTID,INVAMT,INVSTS FROM TEN31LIB/INV22 UNION SELECT INVNO,CUSTID,INVAMT,INVSTS FROM TEN31LIB/INV23
+
+                                  Display Data                                  
+                                              Data width . . . . . . :      37  
+ Position to line  . . . . .              Shift to column  . . . . . .          
+ ....+....1....+....2....+....3....+..                                          
+   INVNO   CUSTID      INVAMT   INVSTS                                          
+     123   1231          9.00     P                                             
+     234   2341          1.00     U                                             
+     345   3211          7.20     P                                             
+     456   9214         10.00     U                                             
+     165   109          19.85     U                                             
+     231   987          87.51     P                                             
+     678   1243        100.98     U                                             
+     876   890          76.09     P                                             
+ ********  End of data  ********            
+
+4. DEBUGGING ON A RPGLE FILE
+                                    
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                                                                                               
+                       
+                                                                                                                                                                                                                                     
